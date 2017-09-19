@@ -106,10 +106,16 @@ class ChooseModeView(View):
         # If there isn't a verified mode available, then there's nothing
         # to do on this page.  Send the user to the dashboard.
         if not CourseMode.has_verified_mode(modes):
+            # If the course has started redirect to course home instead
+            if course.has_started():
+                return redirect(reverse('openedx.course_experience.course_home'))
             return redirect(reverse('dashboard'))
 
         # If a user has already paid, redirect them to the dashboard.
         if is_active and (enrollment_mode in CourseMode.VERIFIED_MODES + [CourseMode.NO_ID_PROFESSIONAL_MODE]):
+            # If the course has started redirect to course home instead
+            if course.has_started():
+                return redirect(reverse('openedx.course_experience.course_home'))
             return redirect(reverse('dashboard'))
 
         donation_for_course = request.session.get("donation_for_course", {})
@@ -224,10 +230,16 @@ class ChooseModeView(View):
             # system, such as third-party discovery.  These workflows result in learners arriving
             # directly at this screen, and they will not necessarily be pre-enrolled in the audit mode.
             CourseEnrollment.enroll(request.user, course_key, CourseMode.AUDIT)
+            # If the course has started redirect to course home instead
+            if course.has_started():
+                return redirect(reverse('openedx.course_experience.course_home'))
             return redirect(reverse('dashboard'))
 
         if requested_mode == 'honor':
             CourseEnrollment.enroll(user, course_key, mode=requested_mode)
+            # If the course has started redirect to course home instead
+            if course.has_started():
+                return redirect(reverse('openedx.course_experience.course_home'))
             return redirect(reverse('dashboard'))
 
         mode_info = allowed_modes[requested_mode]

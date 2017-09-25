@@ -27,6 +27,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+NON_EXISTENT_TRANSCRIPT = 'non_existent_dummy_file_name'
 
 class TranscriptException(Exception):  # pylint: disable=missing-docstring
     pass
@@ -669,7 +670,7 @@ class VideoTranscriptsMixin(object):
             return translations
 
         # If we've gotten this far, we're going to verify that the transcripts
-        # being referenced are actually in the contentstore.
+        # being referenced are actually either in the contentstore or in edx-val.
         val_transcript_languages = []
         if verify_val_transcripts:
             val_transcript_languages = get_available_transcript_languages(
@@ -796,11 +797,14 @@ class VideoTranscriptsMixin(object):
                 youtube_id_1_0=self.youtube_id_1_0,
                 html5_sources=self.html5_sources
             )
+            # HACK Warning! this is temporary and will be removed once edx-val take over the
+            # transcript module and contentstore will only function as fallback until all the
+            # data is migrated to edx-val.
             for language_code in transcript_languages:
                 if language_code == 'en' and not sub:
-                    sub = 'dummy_val_en_that_wont_be_in_contentstore'
+                    sub = NON_EXISTENT_TRANSCRIPT
                 elif not transcripts.get(language_code):
-                    transcripts[language_code] = 'dummy_val_that_wont_be_in_contentstore'
+                    transcripts[language_code] = NON_EXISTENT_TRANSCRIPT
 
         return {
             "sub": sub,

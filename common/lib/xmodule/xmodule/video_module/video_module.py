@@ -43,6 +43,7 @@ from xmodule.xml_module import deserialize_field, is_pointer_tag, name_to_pathna
 from .bumper_utils import bumperize
 from .transcripts_utils import (
     get_html5_ids,
+    get_video_ids_info,
     is_val_transcript_feature_enabled_for_course,
     Transcript,
     VideoTranscriptsMixin,
@@ -908,7 +909,6 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
             )
 
     def index_dictionary(self):
-        # TODO discovery on this method!
         xblock_body = super(VideoDescriptor, self).index_dictionary()
         video_body = {
             "display_name": self.display_name,

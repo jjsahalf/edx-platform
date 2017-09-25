@@ -107,13 +107,13 @@ class LoginFromCombinedPageTest(UniqueCourseTest):
         )
         self.dashboard_page = DashboardPage(self.browser)
 
+    def test_login_success(self):
         # Create a course to enroll in
         CourseFixture(
             self.course_info['org'], self.course_info['number'],
             self.course_info['run'], self.course_info['display_name']
         ).install()
 
-    def test_login_success(self):
         # Create a user account
         email, password = self._create_unique_user()
 
@@ -163,6 +163,12 @@ class LoginFromCombinedPageTest(UniqueCourseTest):
         Test that we can login using third party credentials, and that the
         third party account gets linked to the edX account.
         """
+        # Create a course to enroll in
+        CourseFixture(
+            self.course_info['org'], self.course_info['number'],
+            self.course_info['run'], self.course_info['display_name']
+        ).install()
+
         # Create a user account
         email, password = self._create_unique_user()
 
@@ -203,6 +209,12 @@ class LoginFromCombinedPageTest(UniqueCourseTest):
 
     def test_hinted_login(self):
         """ Test the login page when coming from course URL that specified which third party provider to use """
+        # Create a course to enroll in
+        CourseFixture(
+            self.course_info['org'], self.course_info['number'],
+            self.course_info['run'], self.course_info['display_name']
+        ).install()
+
         # Create a user account and link it to third party auth with the dummy provider:
         AutoAuthPage(self.browser, course_id=self.course_id).visit()
         self._link_dummy_account()
@@ -295,13 +307,14 @@ class RegisterFromCombinedPageTest(UniqueCourseTest):
         )
         self.dashboard_page = DashboardPage(self.browser)
 
+    def test_register_success(self):
         # Create a course to enroll in
         CourseFixture(
             self.course_info['org'], self.course_info['number'],
-            self.course_info['run'], self.course_info['display_name']
+            self.course_info['run'], self.course_info['display_name'],
+            start_date=datetime.today() + timedelta(days=1)
         ).install()
 
-    def test_register_success(self):
         # Navigate to the registration page
         self.register_page.visit()
 
@@ -356,6 +369,12 @@ class RegisterFromCombinedPageTest(UniqueCourseTest):
         Test that we can register using third party credentials, and that the
         third party account gets linked to the edX account.
         """
+        # Create a course to enroll in
+        CourseFixture(
+            self.course_info['org'], self.course_info['number'],
+            self.course_info['run'], self.course_info['display_name']
+        ).install()
+
         # Navigate to the register page
         self.register_page.visit()
         # Baseline screen-shots are different for chrome and firefox.

@@ -103,6 +103,11 @@
       }
     }
   }
+
+  .message-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
 }
 
 // Welcome message / Latest Update message

@@ -5,9 +5,12 @@ course-run-specific date which will be displayed to the user.
 """
 import datetime
 
-from babel.dates import format_timedelta
+from babel.dates import format_date, format_timedelta
+
+from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.utils.functional import cached_property
+from django.utils.timezone import UTC
 from django.utils.translation import get_language, to_locale, ugettext_lazy
 from django.utils.translation import ugettext as _
 from lazy import lazy
@@ -17,6 +20,8 @@ from course_modes.models import CourseMode
 from lms.djangoapps.commerce.utils import EcommerceService
 from lms.djangoapps.verify_student.models import SoftwareSecurePhotoVerification, VerificationDeadline
 from openedx.core.djangoapps.certificates.api import can_show_certificate_available_date_field
+from openedx.core.djangolib.markup import HTML, Text
+from openedx.features.course_experience import CourseHomeMessages
 from student.models import CourseEnrollment
 
 
@@ -40,6 +45,12 @@ class DateSummary(object):
     def description(self):
         """The detail text displayed by this summary."""
         return ''
+
+    def register_alerts(self, request, course):
+        """
+        Registers any relevant course alerts given the current request.
+        """
+        pass
 
     @property
     def date(self):
@@ -169,6 +180,27 @@ class CourseStartDate(DateSummary):
     def date(self):
         return self.course.start
 
+    def register_alerts(self, request, course):
+        """
+        Registers an alert if the course has not started yet.
+        """
+        now = datetime.datetime.now(UTC())
+        already_started = course.start and now > course.start
+        is_enrolled = CourseEnrollment.get_enrollment(request.user, course.id)
+        if is_enrolled and not already_started:
+            days_until_start_string = format_timedelta(course.start - now, locale=to_locale(get_language()))
+            course_start_date = format_date(course.start, locale=to_locale(get_language()))
+            CourseHomeMessages.register_info_message(
+                request,
+                Text(_(
+                    "Don't forget to add a calendar reminder!"
+                )),
+                title=Text(_("Course starts in {days_until_start_string} on {course_start_date}.")).format(
+                    days_until_start_string=days_until_start_string,
+                    course_start_date=course_start_date,
+                )
+            )
+
 
 class CourseEndDate(DateSummary):
     """
@@ -194,6 +226,25 @@ class CourseEndDate(DateSummary):
     @property
     def date(self):
         return self.course.end
+
+    def register_alerts(self, request, course):
+        """
+        Registers an alert if the end date is approaching.
+        """
+        now = datetime.datetime.now(UTC())
+        already_started = course.start and now > course.start
+        is_enrolled = CourseEnrollment.get_enrollment(request.user, course.id)
+        if is_enrolled and already_started:
+            days_until_end_string = format_timedelta(course.end - now, locale=to_locale(get_language()))
+            course_end_date = format_date(course.end, locale=to_locale(get_language()))
+            CourseHomeMessages.register_info_message(
+                request,
+                Text(self.description),
+                title=Text(_('This course is ending in {days_until_end_string} on {course_end_date}.')).format(
+                    days_until_end_string=days_until_end_string,
+                    course_end_date=course_end_date,
+                )
+            )
 
 
 class CertificateAvailableDate(DateSummary):
@@ -298,6 +349,41 @@ class VerifiedUpgradeDeadlineDate(DateSummary):
             deadline = self.enrollment.upgrade_deadline
 
         return deadline
+
+    def register_alerts(self, request, course):
+        """
+        Registers an alert if the verification deadline is approaching.
+        """
+        now = datetime.datetime.now(UTC())
+        verified_mode = self.enrollment.verified_mode if self.enrollment else None
+        upgrade_price = verified_mode.min_price if verified_mode else None
+        if self.is_enabled and upgrade_price:
+            days_left_to_upgrade = format_timedelta(self.date - now, locale=to_locale(get_language()))
+            CourseHomeMessages.register_info_message(
+                request,
+                Text(_(
+                    'In order to qualify for a certificate, you must meet all course grading '
+                    'requirements, upgrade before the course deadline, and successfully verify '
+                    'your identity on {platform_name} if you have not done so already.{button_panel}'
+                )).format(
+                    platform_name=settings.PLATFORM_NAME,
+                    button_panel=HTML(_(
+                        '<div class="message-actions">'
+                        '<a class="btn btn-upgrade" href="{upgrade_url}">{upgrade_label}</a>'
+                        '</div>'
+                    )).format(
+                        upgrade_url=self.link,
+                        upgrade_label=Text(_('Upgrade ({upgrade_price})')).format(
+                            upgrade_price='${upgrade_price}'.format(upgrade_price=upgrade_price),
+                        ),
+                    )
+                ),
+                title=Text(_(
+                    "Don't forget, you have {days_left_to_upgrade} left to upgrade to a Verified Certificate."
+                )).format(
+                    days_left_to_upgrade=days_left_to_upgrade,
+                )
+            )
 
 
 class VerificationDeadlineDate(DateSummary):

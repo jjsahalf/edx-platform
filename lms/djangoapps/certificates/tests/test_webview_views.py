@@ -212,6 +212,15 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
     Tests for the certificates web/html views
     """
 
+    def setUp(self):
+        super(CertificatesViewsTests, self).setUp()
+        self.mock_course_run_details = {
+            'content_language': 'en',
+            'start': datetime.datetime(2017, 1, 1),
+            'end': datetime.datetime(2017, 2, 2),
+            'max_effort': 10
+        }
+
     @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
     def test_linkedin_share_url(self):
         """
@@ -921,7 +930,7 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
         Tests custom template search and rendering.
         This test should check template matching when org={org}, course={course}, mode={mode}.
         """
-        mock_get_course_run_details.return_value = {'content_language': 'en'}
+        mock_get_course_run_details.return_value = self.mock_course_run_details
         self._add_course_certificates(count=1, signatory_count=2)
         self._create_custom_named_template('test_template_1_course', org_id=1, mode='honor', course_key=unicode(self.course.id))
         self._create_custom_named_template('test_template_2_course', org_id=1, mode='verified', course_key=unicode(self.course.id))
@@ -984,7 +993,7 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
         Tests custom template search when we have a single template for a organization.
         This test should check template matching when org={org}, course=Null, mode=null.
         """
-        mock_get_course_run_details.return_value = {'content_language': 'en'}
+        mock_get_course_run_details.return_value = self.mock_course_run_details
         self._add_course_certificates(count=1, signatory_count=2)
         self._create_custom_named_template('test_template_1_course', org_id=1, mode=None)  # Correct template
         self._create_custom_named_template('test_template_2_course', org_id=1, mode='verified')  # wrong mode
@@ -1007,7 +1016,7 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
         Tests custom template search if we have a single template for a course mode.
         This test should check template matching when org=null, course=Null, mode={mode}.
         """
-        mock_get_course_run_details.return_value = {'content_language': 'en'}
+        mock_get_course_run_details.return_value = self.mock_course_run_details
         mode = 'honor'
         self._add_course_certificates(count=1, signatory_count=2)
         self._create_custom_named_template('test_template_1_course', org_id=None, mode=mode)  # Correct template
@@ -1242,7 +1251,7 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
         """
         Tests custom template renders properly with unicode data.
         """
-        mock_get_course_run_details.return_value = {'content_language': 'en'}
+        mock_get_course_run_details.return_value = self.mock_course_run_details
         mode = 'honor'
         self._add_course_certificates(count=1, signatory_count=2)
         self._create_custom_template(mode=mode)
@@ -1276,7 +1285,7 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
         """
         Tests certificate template asset display by slug using static.certificate_asset_url method.
         """
-        mock_get_course_run_details.return_value = {'content_language': 'en'}
+        mock_get_course_run_details.return_value = self.mock_course_run_details
         self._add_course_certificates(count=1, signatory_count=2)
         self._create_custom_template(mode='honor')
         test_url = get_certificate_url(

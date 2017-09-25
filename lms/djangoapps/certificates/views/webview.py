@@ -252,7 +252,12 @@ def _update_course_context(request, context, course, course_key, platform_name):
     if CertificateGenerationCourseSetting.is_language_specific_templates_enabled_for_course(course_key):
         fields = ['start', 'end', 'max_effort', 'content_language']
         course_run_data = get_course_run_details(course_key, fields)
-        context.update(course_run_data)
+        if course_run_data['start'] and course_run_data['end'] and course_run_data['max_effort']:
+            # Calculate duration of the course run in weeks, multiplied by max_effort for total Hours of Effort
+            duration = (course_run_data['end'] - course_run_data['start']).days / 7
+            hours_of_effort = duration * course_run_data['max_effort']
+            context['hours_of_effort'] = hours_of_effort
+        context['content_language'] = course_run_data['content_language']
 
 
 def _update_social_context(request, context, course, user, user_certificate, platform_name):

@@ -21,7 +21,7 @@ from lms.djangoapps.commerce.utils import EcommerceService
 from lms.djangoapps.verify_student.models import SoftwareSecurePhotoVerification, VerificationDeadline
 from openedx.core.djangoapps.certificates.api import can_show_certificate_available_date_field
 from openedx.core.djangolib.markup import HTML, Text
-from openedx.features.course_experience import CourseHomeMessages
+from openedx.features.course_experience import CourseHomeMessages, UPGRADE_DEADLINE_MESSAGE
 from student.models import CourseEnrollment
 
 
@@ -185,9 +185,11 @@ class CourseStartDate(DateSummary):
         Registers an alert if the course has not started yet.
         """
         now = datetime.datetime.now(UTC())
-        already_started = course.start and now > course.start
         is_enrolled = CourseEnrollment.get_enrollment(request.user, course.id)
-        if is_enrolled and not already_started:
+        if not course.start or not is_enrolled:
+            return
+        days_until_start = (course.start - now).days
+        if days_until_start > 0 and days_until_start <= settings.COURSE_MESSAGE_ALERT_DURATION_IN_DAYS:
             days_until_start_string = format_timedelta(course.start - now, locale=to_locale(get_language()))
             course_start_date = format_date(course.start, locale=to_locale(get_language()))
             CourseHomeMessages.register_info_message(
@@ -351,7 +353,7 @@ class VerifiedUpgradeDeadlineDate(DateSummary):
         now = datetime.datetime.now(UTC())
         verified_mode = self.enrollment.verified_mode if self.enrollment else None
         upgrade_price = verified_mode.min_price if verified_mode else None
-        if self.is_enabled and upgrade_price:
+        if UPGRADE_DEADLINE_MESSAGE.is_enabled(course.id) and self.is_enabled and upgrade_price:
             days_left_to_upgrade = format_timedelta(self.date - now, locale=to_locale(get_language()))
             CourseHomeMessages.register_info_message(
                 request,

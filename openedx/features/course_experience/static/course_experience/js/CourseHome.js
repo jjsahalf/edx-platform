@@ -44,6 +44,7 @@ export class CourseHome {  // eslint-disable-line import/prefer-default-export
 
     $(document).ready(() => {
       this.configureUpgradeMessage();
+      this.configureUpgradeAnalytics();
     });
   }
 
@@ -55,6 +56,26 @@ export class CourseHome {  // eslint-disable-line import/prefer-default-export
 
     window.analytics.track(event, properties);
   }
+
+  // Promotion analytics for upgrade messages on course home.
+  configureUpgradeAnalytics() {
+    $('.btn-upgrade').each(
+      (index, button) => {
+        var promotionEventProperties = {
+          promotion_id: 'courseware_verified_certificate_upsell',
+          creative: $(button).data('creative'),
+          name: 'In-Course Verification Prompt',
+          position: $(button).data('position'),
+        };
+        CourseHome.fireSegmentEvent('Promotion Viewed', promotionEventProperties);
+        $(button).click(() => {
+          CourseHome.fireSegmentEvent('Promotion Clicked', promotionEventProperties);
+        });
+      }
+    );
+  }
+
+
 
   /**
    * Persists the collapsed state of the upgrade message. If the message is collapsed,
@@ -76,13 +97,10 @@ export class CourseHome {  // eslint-disable-line import/prefer-default-export
     const $vcDismissToggle = $('.vc-toggle', $vcMessage);
     const logEventProperties = { courseRunKey: this.courseRunKey };
     const promotionEventProperties = {
-      promotion_id: 'courseware_verified_certificate_upsell',
       creative: 'original_hero',
-      name: 'In-Course Verification Prompt',
       position: 'hero',
     };
 
-    CourseHome.fireSegmentEvent('Promotion Viewed', promotionEventProperties);
     Logger.log('edx.course.upgrade.hero.displayed', logEventProperties);
 
     // Get height of container and button
@@ -130,7 +148,6 @@ export class CourseHome {  // eslint-disable-line import/prefer-default-export
     });
 
     $('.btn-upgrade', $vcMessage).click(() => {
-      CourseHome.fireSegmentEvent('Promotion Clicked', promotionEventProperties);
       Logger.log('edx.course.upgrade.hero.clicked', logEventProperties);
     });
   }

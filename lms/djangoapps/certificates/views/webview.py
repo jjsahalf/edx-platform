@@ -5,6 +5,7 @@ Certificate HTML webview.
 import logging
 import urllib
 from datetime import datetime
+from dateutil import parser
 from uuid import uuid4
 
 import pytz
@@ -254,9 +255,10 @@ def _update_course_context(request, context, course, course_key, platform_name):
         course_run_data = get_course_run_details(course_key, fields)
         if course_run_data['start'] and course_run_data['end'] and course_run_data['max_effort']:
             # Calculate duration of the course run in weeks, multiplied by max_effort for total Hours of Effort
-            duration = (course_run_data['end'] - course_run_data['start']).days / 7
-            hours_of_effort = duration * course_run_data['max_effort']
-            context['hours_of_effort'] = hours_of_effort
+            start = parser.parse(course_run_data['start'])
+            end = parser.parse(course_run_data['end'])
+            max_effort = int(course_run_data['max_effort'])
+            context['hours_of_effort'] = ((end - start).days / 7) * max_effort
         context['content_language'] = course_run_data['content_language']
 
 

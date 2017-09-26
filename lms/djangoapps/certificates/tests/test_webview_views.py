@@ -216,9 +216,9 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
         super(CertificatesViewsTests, self).setUp()
         self.mock_course_run_details = {
             'content_language': 'en',
-            'start': datetime.datetime(2017, 1, 1),
-            'end': datetime.datetime(2017, 2, 2),
-            'max_effort': 10
+            'start': '2013-02-05T05:00:00Z',
+            'end': '2013-03-05T05:00:00Z',
+            'max_effort': '10'
         }
 
     @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
@@ -960,7 +960,7 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
         match org and mode.
         This test should check template matching when org={org}, course=Null, mode={mode}.
         """
-        mock_get_course_run_details.return_value = {'content_language': 'en'}
+        mock_get_course_run_details.return_value = self.mock_course_run_details
         othercourse = CourseFactory.create(
             org='cstX', number='cst_22', display_name='custom template course'
         )
@@ -1048,7 +1048,10 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
         right_language = 'es'
         wrong_language = 'fr'
         mock_get_org_id.return_value = 1
-        mock_get_course_run_details.return_value = {'content_language': 'es'}
+        course_run_details = self.mock_course_run_details
+        course_run_details.update({'content_language': 'es'})
+        mock_get_course_run_details.return_value = course_run_details
+
         CertificateGenerationCourseSetting.set_language_specific_templates_enabled_for_course(self.course.id, True)
 
         self._add_course_certificates(count=1, signatory_count=2)
@@ -1091,7 +1094,9 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
         right_language = 'es'
         wrong_language = 'fr'
         mock_get_org_id.return_value = 1
-        mock_get_course_run_details.return_value = {'content_language': 'es'}
+        course_run_details = self.mock_course_run_details
+        course_run_details.update({'content_language': 'es'})
+        mock_get_course_run_details.return_value = course_run_details
         CertificateGenerationCourseSetting.set_language_specific_templates_enabled_for_course(self.course.id, True)
 
         self._add_course_certificates(count=1, signatory_count=2)
@@ -1133,7 +1138,9 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
         right_language = 'es'
         wrong_language = 'fr'
         mock_get_org_id.return_value = 1
-        mock_get_course_run_details.return_value = {'content_language': 'es'}
+        course_run_details = self.mock_course_run_details
+        course_run_details.update({'content_language': 'es'})
+        mock_get_course_run_details.return_value = course_run_details
         CertificateGenerationCourseSetting.set_language_specific_templates_enabled_for_course(self.course.id, True)
 
         self._add_course_certificates(count=1, signatory_count=2)
@@ -1174,7 +1181,9 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
         right_language = 'es'
         wrong_language = 'fr'
         mock_get_org_id.return_value = 1
-        mock_get_course_run_details.return_value = {'content_language': 'es'}
+        course_run_details = self.mock_course_run_details
+        course_run_details.update({'content_language': 'es'})
+        mock_get_course_run_details.return_value = course_run_details
         CertificateGenerationCourseSetting.set_language_specific_templates_enabled_for_course(self.course.id, True)
 
         self._add_course_certificates(count=1, signatory_count=2)
@@ -1215,7 +1224,9 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
         right_language = 'es'
         wrong_language = 'fr'
         mock_get_org_id.return_value = 1
-        mock_get_course_run_details.return_value = {'content_language': 'es-419'}
+        course_run_details = self.mock_course_run_details
+        course_run_details.update({'content_language': 'es-419'})
+        mock_get_course_run_details.return_value = course_run_details
         CertificateGenerationCourseSetting.set_language_specific_templates_enabled_for_course(self.course.id, True)
 
         self._add_course_certificates(count=1, signatory_count=2)

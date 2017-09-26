@@ -29,6 +29,7 @@ log = logging.getLogger(__name__)
 
 NON_EXISTENT_TRANSCRIPT = 'non_existent_dummy_file_name'
 
+
 class TranscriptException(Exception):  # pylint: disable=missing-docstring
     pass
 

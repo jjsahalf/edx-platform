@@ -274,7 +274,6 @@ class CourseEndDate(DateSummary):
                 )
 
 
-
 class CertificateAvailableDate(DateSummary):
     """
     Displays the certificate available date of the course.

@@ -58,10 +58,11 @@ export class CourseHome {  // eslint-disable-line import/prefer-default-export
   }
 
   // Promotion analytics for upgrade messages on course home.
+  // eslint-disable-next-line class-methods-use-this
   configureUpgradeAnalytics() {
     $('.btn-upgrade').each(
       (index, button) => {
-        var promotionEventProperties = {
+        const promotionEventProperties = {
           promotion_id: 'courseware_verified_certificate_upsell',
           creative: $(button).data('creative'),
           name: 'In-Course Verification Prompt',
@@ -71,11 +72,9 @@ export class CourseHome {  // eslint-disable-line import/prefer-default-export
         $(button).click(() => {
           CourseHome.fireSegmentEvent('Promotion Clicked', promotionEventProperties);
         });
-      }
+      },
     );
   }
-
-
 
   /**
    * Persists the collapsed state of the upgrade message. If the message is collapsed,
@@ -96,10 +95,6 @@ export class CourseHome {  // eslint-disable-line import/prefer-default-export
     const $vcMessage = $('.vc-message');
     const $vcDismissToggle = $('.vc-toggle', $vcMessage);
     const logEventProperties = { courseRunKey: this.courseRunKey };
-    const promotionEventProperties = {
-      creative: 'original_hero',
-      position: 'hero',
-    };
 
     Logger.log('edx.course.upgrade.hero.displayed', logEventProperties);
 

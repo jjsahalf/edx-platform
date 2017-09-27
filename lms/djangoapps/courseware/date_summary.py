@@ -5,7 +5,7 @@ course-run-specific date which will be displayed to the user.
 """
 import datetime
 
-from babel.dates import format_date, format_timedelta
+from babel.dates import format_date, format_time, format_timedelta
 
 from django.conf import settings
 from django.core.urlresolvers import reverse
@@ -189,19 +189,30 @@ class CourseStartDate(DateSummary):
         if not course.start or not is_enrolled:
             return
         days_until_start = (course.start - now).days
-        if days_until_start > 0 and days_until_start <= settings.COURSE_MESSAGE_ALERT_DURATION_IN_DAYS:
-            days_until_start_string = format_timedelta(course.start - now, locale=to_locale(get_language()))
-            course_start_date = format_date(course.start, locale=to_locale(get_language()))
-            CourseHomeMessages.register_info_message(
-                request,
-                Text(_(
-                    "Don't forget to add a calendar reminder!"
-                )),
-                title=Text(_("Course starts in {days_until_start_string} on {course_start_date}.")).format(
-                    days_until_start_string=days_until_start_string,
-                    course_start_date=course_start_date,
+        if course.start > now and days_until_start <= settings.COURSE_MESSAGE_ALERT_DURATION_IN_DAYS:
+            locale = to_locale(get_language())
+            time_remaining_string = format_timedelta(course.start - now, locale=locale)
+            if days_until_start > 0:
+                course_start_date = format_date(course.start, format='long', locale=locale)
+                CourseHomeMessages.register_info_message(
+                    request,
+                    Text(_(
+                        "Don't forget to add a calendar reminder!"
+                    )),
+                    title=Text(_("Course starts in {time_remaining_string} on {course_start_date}.")).format(
+                        time_remaining_string=time_remaining_string,
+                        course_start_date=course_start_date,
+                    )
                 )
-            )
+            else:
+                course_start_time = format_time(course.start, format='short', locale=locale)
+                CourseHomeMessages.register_info_message(
+                    request,
+                    Text(_("Course starts in {time_remaining_string} at {course_start_time}.")).format(
+                        time_remaining_string=time_remaining_string,
+                        course_start_time=course_start_time,
+                    )
+                )
 
 
 class CourseEndDate(DateSummary):
@@ -234,19 +245,34 @@ class CourseEndDate(DateSummary):
         Registers an alert if the end date is approaching.
         """
         now = datetime.datetime.now(UTC())
-        already_started = course.start and now > course.start
         is_enrolled = CourseEnrollment.get_enrollment(request.user, course.id)
-        if is_enrolled and already_started:
-            days_until_end_string = format_timedelta(course.end - now, locale=to_locale(get_language()))
-            course_end_date = format_date(course.end, locale=to_locale(get_language()))
-            CourseHomeMessages.register_info_message(
-                request,
-                Text(self.description),
-                title=Text(_('This course is ending in {days_until_end_string} on {course_end_date}.')).format(
-                    days_until_end_string=days_until_end_string,
-                    course_end_date=course_end_date,
+        if not course.start or now < course.start or not is_enrolled:
+            return
+        days_until_end = (course.end - now).days
+        if course.end > now and days_until_end <= settings.COURSE_MESSAGE_ALERT_DURATION_IN_DAYS:
+            locale = to_locale(get_language())
+            time_remaining_string = format_timedelta(course.end - now, locale=locale)
+            if days_until_end > 0:
+                course_end_date = format_date(course.end, format='long', locale=locale)
+                CourseHomeMessages.register_info_message(
+                    request,
+                    Text(self.description),
+                    title=Text(_('This course is ending in {time_remaining_string} on {course_end_date}.')).format(
+                        time_remaining_string=time_remaining_string,
+                        course_end_date=course_end_date,
+                    )
                 )
-            )
+            else:
+                course_end_time = format_time(course.end, format='short', locale=locale)
+                CourseHomeMessages.register_info_message(
+                    request,
+                    Text(self.description),
+                    title=Text(_('This course is ending in {time_remaining_string} at {course_end_time}.')).format(
+                        time_remaining_string=time_remaining_string,
+                        course_end_time=course_end_time,
+                    )
+                )
+
 
 
 class CertificateAvailableDate(DateSummary):
@@ -352,9 +378,13 @@ class VerifiedUpgradeDeadlineDate(DateSummary):
         """
         now = datetime.datetime.now(UTC())
         verified_mode = self.enrollment.verified_mode if self.enrollment else None
+        if not UPGRADE_DEADLINE_MESSAGE.is_enabled(course.id) or not self.is_enabled:
+            return
         upgrade_price = verified_mode.min_price if verified_mode else None
-        if UPGRADE_DEADLINE_MESSAGE.is_enabled(course.id) and self.is_enabled and upgrade_price:
-            days_left_to_upgrade = format_timedelta(self.date - now, locale=to_locale(get_language()))
+        days_left_to_upgrade = (self.date - now).days
+        if self.date > now and days_left_to_upgrade <= settings.COURSE_MESSAGE_ALERT_DURATION_IN_DAYS:
+            locale = to_locale(get_language())
+            time_remaining_string = format_timedelta(self.date - now, locale=locale)
             CourseHomeMessages.register_info_message(
                 request,
                 Text(_(
@@ -363,13 +393,13 @@ class VerifiedUpgradeDeadlineDate(DateSummary):
                     'your identity on {platform_name} if you have not done so already.{button_panel}'
                 )).format(
                     platform_name=settings.PLATFORM_NAME,
-                    button_panel=HTML(_(
+                    button_panel=HTML(
                         '<div class="message-actions">'
                         '<a class="btn btn-upgrade"'
                         'data-creative="original_message" data-position="course_message"'
                         'href="{upgrade_url}">{upgrade_label}</a>'
                         '</div>'
-                    )).format(
+                    ).format(
                         upgrade_url=self.link,
                         upgrade_label=Text(_('Upgrade ({upgrade_price})')).format(
                             upgrade_price='${upgrade_price}'.format(upgrade_price=upgrade_price),
@@ -377,9 +407,9 @@ class VerifiedUpgradeDeadlineDate(DateSummary):
                     )
                 ),
                 title=Text(_(
-                    "Don't forget, you have {days_left_to_upgrade} left to upgrade to a Verified Certificate."
+                    "Don't forget, you have {time_remaining_string} left to upgrade to a Verified Certificate."
                 )).format(
-                    days_left_to_upgrade=days_left_to_upgrade,
+                    time_remaining_string=time_remaining_string,
                 )
             )
 

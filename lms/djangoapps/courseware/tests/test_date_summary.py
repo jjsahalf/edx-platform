@@ -465,8 +465,8 @@ class TestDateAlerts(SharedModuleStoreTestCase):
     """
     def setUp(self):
         super(TestDateAlerts, self).setUp()
-        with freeze_time('2015-01-02'):
-            self.course = create_course_run(days_till_start=-2)
+        with freeze_time('2017-07-01 09:00:00'):
+            self.course = create_course_run(days_till_start=0)
             self.enrollment = CourseEnrollmentFactory(course_id=self.course.id, mode=CourseMode.AUDIT)
             self.request = RequestFactory().request()
             self.request.session = {}
@@ -474,38 +474,21 @@ class TestDateAlerts(SharedModuleStoreTestCase):
             MessageMiddleware().process_request(self.request)
 
     @ddt.data(
-        [
-            TodaysDate,
-            None
-        ],
-        [
-            CourseStartDate,
-            u'<div class="message-header">Course starts in 3 days on Jan 5, 2015.</div>'
-            u'Don&#39;t forget to add a calendar reminder!'
-        ],
-        [
-            CourseEndDate,
-            u'<div class="message-header">This course is ending in 2 weeks on Jan 16, 2015.</div>'
-            u'After this date, course content will be archived.'
-        ],
-        [
-            VerifiedUpgradeDeadlineDate,
-            u'<div class="message-header">Don&#39;t forget, you have 4 days left to upgrade '
-            u'to a Verified Certificate.</div>'
-            u'In order to qualify for a certificate, you must meet all course grading requirements, '
-        ],
+        ['2017-06-16 09:00:00', None],
+        ['2017-06-17 09:00:00', u'Course starts in 2 weeks on July 1, 2017.'],
+        ['2017-06-30 10:00:00', u'Course starts in 1 day at 9:00 AM.'],
+        ['2017-07-01 08:00:00', u'Course starts in 1 hour at 9:00 AM.'],
+        ['2017-07-01 08:55:00', u'Course starts in 5 minutes at 9:00 AM.'],
+        ['2017-07-01 09:00:00', None],
+        ['2017-08-01 09:00:00', None],
     )
     @ddt.unpack
-    @override_waffle_flag(UPGRADE_DEADLINE_MESSAGE, active=True)
-    def test_date_alerts(self, date_block_class, expected_message_html):
+    def test_start_date_alert(self, current_time, expected_message_html):
         """
-        Verify that the expected alerts are registered.
+        Verify that course start date alerts are registered.
         """
-        # If testing the start date, set it to a date in the future
-        with freeze_time('2015-01-02'):
-            if date_block_class is CourseStartDate:
-                self.course.start = self.course.start + timedelta(days=5)
-            block = date_block_class(self.course, self.request.user)
+        with freeze_time(current_time):
+            block = CourseStartDate(self.course, self.request.user)
             block.register_alerts(self.request, self.course)
             messages = list(CourseHomeMessages.user_messages(self.request))
             if expected_message_html:
@@ -513,6 +496,56 @@ class TestDateAlerts(SharedModuleStoreTestCase):
                 self.assertIn(expected_message_html, messages[0].message_html)
             else:
                 self.assertEqual(len(messages), 0)
+
+    @ddt.data(
+        ['2017-06-30 09:00:00', None],
+        ['2017-07-01 09:00:00', u'This course is ending in 2 weeks on July 15, 2017.'],
+        ['2017-07-14 10:00:00', u'This course is ending in 1 day at 9:00 AM.'],
+        ['2017-07-15 08:00:00', u'This course is ending in 1 hour at 9:00 AM.'],
+        ['2017-07-15 08:55:00', u'This course is ending in 5 minutes at 9:00 AM.'],
+        ['2017-07-15 09:00:00', None],
+        ['2017-08-15 09:00:00', None],
+    )
+    @ddt.unpack
+    def test_end_date_alert(self, current_time, expected_message_html):
+        """
+        Verify that course end date alerts are registered.
+        """
+        with freeze_time(current_time):
+            block = CourseEndDate(self.course, self.request.user)
+            block.register_alerts(self.request, self.course)
+            messages = list(CourseHomeMessages.user_messages(self.request))
+            if expected_message_html:
+                self.assertEqual(len(messages), 1)
+                self.assertIn(expected_message_html, messages[0].message_html)
+            else:
+                self.assertEqual(len(messages), 0)
+
+    @ddt.data(
+        ['2017-06-20 09:00:00', None],
+        ['2017-06-21 09:00:00', u'Don&#39;t forget, you have 2 weeks left to upgrade to a Verified Certificate.'],
+        ['2017-07-04 10:00:00', u'Don&#39;t forget, you have 1 day left to upgrade to a Verified Certificate.'],
+        ['2017-07-05 08:00:00', u'Don&#39;t forget, you have 1 hour left to upgrade to a Verified Certificate.'],
+        ['2017-07-05 08:55:00', u'Don&#39;t forget, you have 5 minutes left to upgrade to a Verified Certificate.'],
+        ['2017-07-05 09:00:00', None],
+        ['2017-08-05 09:00:00', None],
+    )
+    @ddt.unpack
+    @override_waffle_flag(UPGRADE_DEADLINE_MESSAGE, active=True)
+    def test_verified_upgrade_deadline_alert(self, current_time, expected_message_html):
+        """
+        Verify the verified upgrade deadline alerts.
+        """
+        with freeze_time(current_time):
+            block = VerifiedUpgradeDeadlineDate(self.course, self.request.user)
+            block.register_alerts(self.request, self.course)
+            messages = list(CourseHomeMessages.user_messages(self.request))
+            if expected_message_html:
+                self.assertEqual(len(messages), 1)
+                self.assertIn(expected_message_html, messages[0].message_html)
+            else:
+                self.assertEqual(len(messages), 0)
+
 
 
 @attr(shard=1)

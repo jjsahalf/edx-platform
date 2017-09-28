@@ -533,8 +533,7 @@ def get_video_transcript_content(language_code, edx_video_id, youtube_id_1_0, ht
 
 def get_available_transcript_languages(edx_video_id, youtube_id_1_0, html5_sources):
     """
-    Gets available transcript languages from edx-val, only if the corresponding
-    feature flag is enabled for the given `course_id`.
+    Gets available transcript languages from edx-val.
 
     Arguments:
         edx_video_id(unicode): edx-val's video identifier
@@ -601,6 +600,13 @@ class Transcript(object):
 
         `location` is module location.
         """
+        # HACK Warning! this is temporary and will be removed once edx-val take over the
+        # transcript module and contentstore will only function as fallback until all the
+        # data is migrated to edx-val. It will be saving a contentstore hit for a hardcoded
+        # dummy-non-existent-transcript name.
+        if NON_EXISTENT_TRANSCRIPT in [subs_id, filename]:
+            raise NotFoundError
+
         asset_filename = subs_filename(subs_id, lang) if not filename else filename
         return Transcript.get_asset(location, asset_filename)
 
@@ -640,7 +646,7 @@ class VideoTranscriptsMixin(object):
     This is necessary for both VideoModule and VideoDescriptor.
     """
 
-    def available_translations(self, transcripts, verify_assets=None, verify_val_transcripts=None):
+    def available_translations(self, transcripts, verify_assets=None, include_val_transcripts=None):
         """
         Return a list of language codes for which we have transcripts.
 
@@ -654,7 +660,7 @@ class VideoTranscriptsMixin(object):
                 Defaults to `not FALLBACK_TO_ENGLISH_TRANSCRIPTS`.
 
             transcripts (dict): A dict with all transcripts and a sub.
-            verify_val_transcripts(boolean): If True, verifies the edx-val transcripts as well.
+            include_val_transcripts(boolean): If True, adds the edx-val transcript languages as well.
         """
         translations = []
         if verify_assets is None:
@@ -672,9 +678,8 @@ class VideoTranscriptsMixin(object):
 
         # If we've gotten this far, we're going to verify that the transcripts
         # being referenced are actually either in the contentstore or in edx-val.
-        val_transcript_languages = []
-        if verify_val_transcripts:
-            val_transcript_languages = get_available_transcript_languages(
+        if include_val_transcripts:
+            translations = get_available_transcript_languages(
                 edx_video_id=self.edx_video_id,
                 youtube_id_1_0=self.youtube_id_1_0,
                 html5_sources=self.html5_sources
@@ -687,9 +692,7 @@ class VideoTranscriptsMixin(object):
                 try:
                     Transcript.asset(self.location, None, None, sub)
                 except NotFoundError:
-                    # Check in edx-val transcript languages
-                    if 'en' in val_transcript_languages:
-                        translations.append('en')
+                    pass
                 else:
                     translations.append('en')
             else:
@@ -699,14 +702,12 @@ class VideoTranscriptsMixin(object):
             try:
                 Transcript.asset(self.location, None, None, other_langs[lang])
             except NotFoundError:
-                # Check in edx-val transcript languages
-                if lang in val_transcript_languages:
-                    translations.append(lang)
                 continue
 
             translations.append(lang)
 
-        return translations
+        # to clean redundant language codes.
+        return list(set(translations))
 
     def get_transcript(self, transcripts, transcript_format='srt', lang=None):
         """

@@ -335,7 +335,7 @@ class VideoStudentViewHandlers(object):
             available_translations = self.available_translations(
                 transcripts,
                 verify_assets=True,
-                verify_val_transcripts=feature_enabled,
+                include_val_transcripts=feature_enabled,
             )
             if available_translations:
                 response = Response(json.dumps(available_translations))
